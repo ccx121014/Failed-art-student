@@ -42,3 +42,11 @@ coverage/
 *.temp
 .tmp/
 .temp/
+
+# Trae IDE
+.trae/
+
+# Cloudflare Workers
+.wrangler/
+wrangler.toml
+
