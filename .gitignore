@@ -50,3 +50,7 @@ coverage/
 .wrangler/
 wrangler.toml
 
+# Test files
+test-*.js
+
+

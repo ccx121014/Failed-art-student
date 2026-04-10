@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>落榜美术生模拟器</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- 游戏标题和介绍 -->
+    <header class="game-header">
+      <h1>落榜美术生模拟器</h1>
+      <p class="game-description">模拟阿道夫·希特勒在1907年艺术学院落榜后的人生选择</p>
+      <button class="btn start-btn" onclick="startGame()">开始游戏</button>
+    </header>
+
+    <!-- 游戏容器 -->
+    <div id="game-container" class="game-container">
+      <!-- 游戏标题和时间线 -->
+      <div class="game-header-section">
+        <h2 id="game-title" class="game-title">1907年，维也纳艺术学院</h2>
+        <div class="timeline">
+          <div class="timeline-item active" data-year="1907">1907</div>
+          <div class="timeline-item" data-year="1914">1914</div>
+          <div class="timeline-item" data-year="1933">1933</div>
+          <div class="timeline-item" data-year="1939">1939</div>
+          <div class="timeline-item" data-year="1946">1946</div>
+        </div>
+      </div>
+
+      <!-- 游戏场景描述 -->
+      <div class="scene-description">
+        <p id="game-description">你是阿道夫·希特勒，一位来自奥地利的年轻艺术家。你满怀希望地报考了维也纳艺术学院，但不幸落榜了。这是你人生的一个重要转折点，你的选择将影响你的未来...</p>
+      </div>
+
+      <!-- 历史背景信息 -->
+      <div class="historical-context">
+        <h3>历史背景</h3>
+        <p id="historical-background">阿道夫·希特勒出生于1889年4月20日，是奥地利海关官员阿洛伊斯·希特勒和他的第三任妻子克拉拉·波尔兹尔的儿子。1907年，希特勒前往维也纳报考艺术学院，但两次均未被录取。这段经历对他的人生产生了深远的影响。</p>
+        <h4>历史事件</h4>
+        <ul id="historical-events">
+          <li>1907年：希特勒首次报考维也纳艺术学院，未被录取</li>
+          <li>1908年：希特勒再次报考维也纳艺术学院，再次未被录取</li>
+          <li>1909-1913年：希特勒在维也纳过着流浪生活，靠卖画和打零工为生</li>
+          <li>1913年：希特勒前往慕尼黑，避免被奥地利征兵</li>
+          <li>1914年：第一次世界大战爆发，希特勒加入德国军队</li>
+        </ul>
+      </div>
+
+      <!-- 选择容器 -->
+      <div id="choices-container" class="choices-container">
+        <h3>请选择你的下一步行动：</h3>
+        <div class="choices-list"></div>
+      </div>
+
+      <!-- 结果容器 -->
+      <div id="result-container" class="result-container">
+        <h3>选择结果</h3>
+        <p id="result-text"></p>
+      </div>
+
+      <!-- 历史记录容器 -->
+      <div id="history-container" class="history-container">
+        <h3>你的人生轨迹</h3>
+        <ul id="history-list"></ul>
+      </div>
+
+      <!-- 结局容器 -->
+      <div id="ending-container" class="ending-container">
+        <h3>游戏结束</h3>
+        <p id="ending-text"></p>
+        <button class="btn restart-btn" onclick="restartGame()">重新开始</button>
+      </div>
+
+      <!-- 加载指示器 -->
+      <div id="loading-container" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let gameState = {
+      gameId: null,
+      history: [],
+      currentStep: 0,
+      gameOver: false,
+      timeline: 1907
+    };
+
+    // API基础URL
+    const API_BASE_URL = 'http://localhost:3000/api';
+
+    // 开始游戏
+    async function startGame() {
+      try {
+        showLoading();
+        const response = await axios.post(`${API_BASE_URL}/start`);
+        gameState.gameId = response.data.gameId;
+        gameState.history = [];
+        gameState.currentStep = 0;
+        gameState.gameOver = false;
+        gameState.timeline = 1907;
+
+        // 显示游戏容器
+        document.querySelector('.game-header').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        updateTimeline(1907);
+        await getChoices();
+      } catch (error) {
+        console.error('开始游戏时出错:', error);
+        alert('开始游戏失败，请稍后重试');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // 重新开始游戏
+    function restartGame() {
+      document.getElementById('game-container').style.display = 'none';
+      document.querySelector('.game-header').style.display = 'block';
+      document.getElementById('ending-container').style.display = 'none';
+      document.getElementById('history-container').style.display = 'none';
+      document.getElementById('result-container').style.display = 'none';
+    }
+
+    // 获取选择
+    async function getChoices() {
+      try {
+        showLoading();
+        const response = await axios.get(`${API_BASE_URL}/choices/${gameState.gameId}`);
+        const choices = response.data.choices.split('\n').filter(c => c.trim());
+        displayChoices(choices);
+      } catch (error) {
+        console.error('获取选择时出错:', error);
+        alert('获取选择失败，请稍后重试');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // 显示选择
+    function displayChoices(choices) {
+      const choicesList = document.querySelector('.choices-list');
+      choicesList.innerHTML = '';
+      
+      choices.forEach(function(choice, index) {
+        if (choice.trim()) {
+          const button = document.createElement('button');
+          button.className = 'btn choice-btn';
+          button.textContent = choice;
+          button.onclick = function() { makeChoice(index + 1); };
+          choicesList.appendChild(button);
+        }
+      });
+
+      document.getElementById('choices-container').style.display = 'block';
+      document.getElementById('result-container').style.display = 'none';
+    }
+
+    // 做出选择
+    async function makeChoice(choiceIndex) {
+      try {
+        showLoading();
+        const response = await axios.post(`${API_BASE_URL}/choice/${gameState.gameId}`, {
+          choiceIndex: choiceIndex
+        });
+
+        const result = response.data.result;
+        const gameOver = response.data.gameOver;
+        const timeline = response.data.timeline;
+
+        // 更新游戏状态
+        gameState.timeline = timeline;
+        gameState.currentStep++;
+        gameState.gameOver = gameOver;
+
+        // 显示结果
+        document.getElementById('result-text').textContent = result;
+        document.getElementById('result-container').style.display = 'block';
+        document.getElementById('choices-container').style.display = 'none';
+
+        // 更新时间线
+        updateTimeline(timeline);
+        updateHistoricalContext(timeline);
+
+        if (gameOver) {
+          // 显示结局
+          const ending = response.data.ending;
+          document.getElementById('ending-text').textContent = ending;
+          document.getElementById('ending-container').style.display = 'block';
+
+          // 显示历史记录
+          const history = response.data.history;
+          displayHistory(history);
+          document.getElementById('history-container').style.display = 'block';
+        } else {
+          // 延迟获取下一组选择
+          setTimeout(getChoices, 3000);
+        }
+      } catch (error) {
+        console.error('做出选择时出错:', error);
+        alert('提交选择失败，请稍后重试');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // 显示历史记录
+    function displayHistory(history) {
+      const historyList = document.getElementById('history-list');
+      historyList.innerHTML = '';
+
+      history.forEach(function(item, index) {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>选择 ${index + 1}:</strong> ${item.choice}<br><strong>结果:</strong> ${item.result}`;
+        historyList.appendChild(li);
+      });
+    }
+
+    // 更新时间线
+    function updateTimeline(year) {
+      const timelineItems = document.querySelectorAll('.timeline-item');
+      timelineItems.forEach(item => {
+        if (parseInt(item.dataset.year) === year) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // 更新游戏标题
+      let title = '';
+      if (year === 1907) {
+        title = '1907年，维也纳艺术学院';
+      } else if (year >= 1914 && year <= 1918) {
+        title = '1914年，第一次世界大战';
+      } else if (year >= 1933 && year <= 1939) {
+        title = '1933年，纳粹党掌权';
+      } else if (year >= 1939 && year <= 1945) {
+        title = '1939年，第二次世界大战';
+      } else if (year > 1945) {
+        title = '1946年，战后时期';
+      }
+      document.getElementById('game-title').textContent = title;
+    }
+
+    // 更新历史背景
+    function updateHistoricalContext(year) {
+      let background = '';
+      let events = [];
+
+      if (year === 1907) {
+        background = '阿道夫·希特勒出生于1889年4月20日，是奥地利海关官员阿洛伊斯·希特勒和他的第三任妻子克拉拉·波尔兹尔的儿子。1907年，希特勒前往维也纳报考艺术学院，但两次均未被录取。这段经历对他的人生产生了深远的影响。';
+        events = [
+          '1907年：希特勒首次报考维也纳艺术学院，未被录取',
+          '1908年：希特勒再次报考维也纳艺术学院，再次未被录取',
+          '1909-1913年：希特勒在维也纳过着流浪生活，靠卖画和打零工为生',
+          '1913年：希特勒前往慕尼黑，避免被奥地利征兵',
+          '1914年：第一次世界大战爆发，希特勒加入德国军队'
+        ];
+      } else if (year >= 1914 && year <= 1918) {
+        background = '1914年，第一次世界大战爆发，希特勒加入了德国巴伐利亚预备役步兵团。他在战争中表现英勇，获得了铁十字勋章。战争的经历对他的思想和性格产生了深远的影响。';
+        events = [
+          '1914年：第一次世界大战爆发，希特勒加入德国军队',
+          '1916年：希特勒在索姆河战役中受伤',
+          '1918年：德国战败，第一次世界大战结束',
+          '1919年：希特勒加入德国工人党（纳粹党前身）',
+          '1923年：希特勒发动啤酒馆政变，失败后被捕'
+        ];
+      } else if (year >= 1933 && year <= 1939) {
+        background = '1933年，希特勒成为德国总理，纳粹党在德国掌权。他开始实施一系列政策，包括扩充军备、迫害犹太人和其他少数群体，以及寻求领土扩张。这些政策最终导致了第二次世界大战的爆发。';
+        events = [
+          '1933年：希特勒成为德国总理，纳粹党掌权',
+          '1935年：德国开始重新武装，违反凡尔赛和约',
+          '1936年：德国占领莱茵兰非军事区',
+          '1938年：德国吞并奥地利，慕尼黑协议签订',
+          '1939年：德国入侵波兰，第二次世界大战爆发'
+        ];
+      } else if (year >= 1939 && year <= 1945) {
+        background = '1939年，德国入侵波兰，第二次世界大战爆发。希特勒作为德国的最高统帅，指挥德国军队在欧洲迅速推进。战争期间，纳粹德国实施了大规模的种族灭绝政策，导致数百万人死亡。';
+        events = [
+          '1939年：德国入侵波兰，第二次世界大战爆发',
+          '1940年：德国占领法国，开始对英国进行轰炸',
+          '1941年：德国入侵苏联，珍珠港事件爆发',
+          '1942年：斯大林格勒战役开始',
+          '1945年：德国战败，第二次世界大战结束'
+        ];
+      } else if (year > 1945) {
+        background = '1945年，德国战败，第二次世界大战结束。希特勒在柏林自杀，纳粹德国被盟军占领。战后，欧洲面临着重建的挑战，同时也对纳粹罪行进行了审判。';
+        events = [
+          '1945年：德国战败，希特勒自杀',
+          '1945-1946年：纽伦堡审判',
+          '1947年：冷战开始',
+          '1949年：德国分裂为东德和西德',
+          '1990年：德国统一'
+        ];
+      }
+
+      document.getElementById('historical-background').textContent = background;
+      
+      const eventsList = document.getElementById('historical-events');
+      eventsList.innerHTML = '';
+      events.forEach(event => {
+        const li = document.createElement('li');
+        li.textContent = event;
+        eventsList.appendChild(li);
+      });
+    }
+
+    // 显示加载指示器
+    function showLoading() {
+      document.getElementById('loading-container').style.display = 'flex';
+    }
+
+    // 隐藏加载指示器
+    function hideLoading() {
+      document.getElementById('loading-container').style.display = 'none';
+    }
+
+    // 初始化页面
+    function init() {
+      document.getElementById('game-container').style.display = 'none';
+      document.getElementById('result-container').style.display = 'none';
+      document.getElementById('history-container').style.display = 'none';
+      document.getElementById('ending-container').style.display = 'none';
+      document.getElementById('loading-container').style.display = 'none';
+    }
+
+    // 页面加载完成后初始化
+    window.onload = init;
+  </script>
+</body>
+</html>
