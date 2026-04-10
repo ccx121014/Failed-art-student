@@ -1,0 +1,23 @@
+{
+  "name": "hitler-simulator",
+  "version": "1.0.0",
+  "description": "落榜美术生（希特勒）模拟器 - 基于AI的人生重开模拟器",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "simulator",
+    "history",
+    "AI",
+    "game"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "openai": "^6.34.0"
+  }
+}
