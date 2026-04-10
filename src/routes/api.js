@@ -23,44 +23,50 @@ router.post('/start', (req, res) => {
 });
 
 // 获取选择
-router.get('/choices/:gameId', async (req, res) => {
-  try {
-    const gameId = req.params.gameId;
-    const game = gameState.getGame(gameId);
-    
-    if (!game) {
-      return res.status(404).json({ error: '游戏不存在' });
-    }
+  router.get('/choices/:gameId', async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      const game = gameState.getGame(gameId);
+      
+      if (!game) {
+        return res.status(404).json({ error: '游戏不存在' });
+      }
 
-    let prompt = '';
-    
-    // 根据时间线生成不同的提示
-    if (game.timeline === 1907) {
-      prompt = '作为1907年艺术学院落榜的阿道夫·希特勒，在这个人生转折点，你有哪些可能的选择？请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于继续追求艺术、寻找其他职业、改变生活环境等。';
-    } else if (game.timeline >= 1914 && game.timeline <= 1918) {
-      prompt = '作为参加第一次世界大战的阿道夫·希特勒，你在战争中面临着各种挑战和机遇。请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于战场表现、人际关系、未来规划等。';
-    } else if (game.timeline >= 1933 && game.timeline <= 1939) {
-      prompt = '作为德国领导人的阿道夫·希特勒，在二战前夕，你面临着重要的政治和军事决策。请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于外交政策、军事准备、国内政策等。';
-    } else if (game.timeline >= 1939 && game.timeline <= 1945) {
-      prompt = '作为二战期间的阿道夫·希特勒，你面临着战争的各种挑战和决策。请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于军事战略、外交谈判、国内管理等。';
-    } else if (game.timeline > 1945) {
-      prompt = '作为战后的阿道夫·希特勒，你面临着新的人生挑战和机遇。请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于生活方式、职业选择、个人反思等。';
-    }
+      let prompt = '';
+      
+      // 根据时间线生成不同的提示
+      if (game.timeline === 1907) {
+        prompt = '作为1907年艺术学院落榜的阿道夫·希特勒，在这个人生转折点，你有哪些可能的选择？请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于继续追求艺术、寻找其他职业、改变生活环境等。';
+      } else if (game.timeline >= 1914 && game.timeline <= 1918) {
+        prompt = '作为参加第一次世界大战的阿道夫·希特勒，你在战争中面临着各种挑战和机遇。请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于战场表现、人际关系、未来规划等。';
+      } else if (game.timeline >= 1933 && game.timeline <= 1939) {
+        prompt = '作为德国领导人的阿道夫·希特勒，在二战前夕，你面临着重要的政治和军事决策。请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于外交政策、军事准备、国内政策等。';
+      } else if (game.timeline >= 1939 && game.timeline <= 1945) {
+        prompt = '作为二战期间的阿道夫·希特勒，你面临着战争的各种挑战和决策。请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于军事战略、外交谈判、国内管理等。';
+      } else if (game.timeline > 1945) {
+        prompt = '作为战后的阿道夫·希特勒，你面临着新的人生挑战和机遇。请生成3个不同的选择，每个选择应该有不同的方向，包括但不限于生活方式、职业选择、个人反思等。';
+      }
 
-    if (game.history.length > 0) {
-      prompt += '\n\n之前的选择和结果：';
-      game.history.forEach(function(item, index) {
-        prompt += '\n' + (index + 1) + '. 选择：' + item.choice + '\n   结果：' + item.result;
-      });
-    }
+      if (game.history.length > 0) {
+        prompt += '\n\n之前的选择和结果：';
+        game.history.forEach(function(item, index) {
+          prompt += '\n' + (index + 1) + '. 选择：' + item.choice + '\n   结果：' + item.result;
+        });
+      }
 
-    const choices = await aiService.generateChoices(prompt, game.timeline);
-    res.json({ choices });
-  } catch (error) {
-    console.error('获取选择时出错:', error);
-    res.status(500).json({ error: '获取选择失败' });
-  }
-});
+      // 获取上一步的选择
+      let previousChoice = null;
+      if (game.history.length > 0) {
+        previousChoice = game.history[game.history.length - 1].choice;
+      }
+
+      const choices = await aiService.generateChoices(prompt, game.timeline, previousChoice);
+      res.json({ choices });
+    } catch (error) {
+      console.error('获取选择时出错:', error);
+      res.status(500).json({ error: '获取选择失败' });
+    }
+  });
 
 // 提交选择并获取结果
 router.post('/choice/:gameId', async (req, res) => {
@@ -122,7 +128,7 @@ router.post('/choice/:gameId', async (req, res) => {
       });
     }
 
-    const result = await aiService.generateResult(resultPrompt, game.timeline);
+    const result = await aiService.generateResult(resultPrompt, game.timeline, selectedChoice);
 
     // 更新游戏状态
     game.history.push({ choice: selectedChoice, result });
